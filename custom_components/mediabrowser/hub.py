@@ -434,7 +434,7 @@ class MediaBrowserHub:
         return await self._async_rest_get_json(ApiUrl.AUTH_KEYS)
 
     async def _async_authenticate(self) -> None:
-        self.api_key = None
+        self.api_key = ""
         self._auth_update()
         response = await self._async_rest_post_get_json(
             ApiUrl.AUTHENTICATE, {"username": self.username, "pw": self.password}
@@ -452,7 +452,7 @@ class MediaBrowserHub:
         return await self._async_rest_get_json(ApiUrl.ACTIVITY_LOG_ENTRIES, params)
 
     async def _async_needs_authentication(self):
-        if self.api_key is None:
+        if self.api_key == "":
             await self._async_authenticate()
         elif not self._is_api_key_validated:
             try:
@@ -632,7 +632,7 @@ class MediaBrowserHub:
                 + f', DeviceId="{self.device_id}"'
                 + f', Version="{self.device_version}"'
             )
-            if self.api_key is not None:
+            if self.api_key != "":
                 auth += f', Token="{self.api_key}"'
                 self._ws_url += f"?api_key={self.api_key}"
             self._default_headers["X-Emby-Authorization"] = auth
@@ -642,7 +642,7 @@ class MediaBrowserHub:
             self._default_params["X-Emby-Device-Name"] = self.device_name
             self._default_params["X-Emby-Device-Id"] = self.device_id
             self._default_params["X-Emby-Client-Version"] = self.device_version
-            if self.api_key is not None:
+            if self.api_key != "":
                 self._default_params["X-Emby-Token"] = self.api_key
                 self._ws_url += f"?api_key={self.api_key}&deviceId={self.device_id}"
             else:

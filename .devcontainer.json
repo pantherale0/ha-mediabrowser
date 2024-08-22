@@ -1,6 +1,6 @@
 {
-    "name": "rumbu13/mediabrowser",
-    "image": "mcr.microsoft.com/vscode/devcontainers/python:0-3.10-bullseye",
+    "name": "ludeeus/integration_blueprint",
+    "image": "mcr.microsoft.com/devcontainers/python:3.12-bullseye",
     "postCreateCommand": "scripts/setup",
     "forwardPorts": [
         8123
@@ -11,10 +11,6 @@
             "onAutoForward": "notify"
         }
     },
-    "appPort": [
-        "7359:7359/udp",
-        "8123:8123/tcp"
-    ],
     "customizations": {
         "vscode": {
             "extensions": [

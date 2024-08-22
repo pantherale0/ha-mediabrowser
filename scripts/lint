@@ -4,4 +4,4 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-pylint **/*.py
+ruff check . --fix

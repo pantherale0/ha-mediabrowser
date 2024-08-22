@@ -25,6 +25,7 @@ CONF_UPCOMING_MEDIA = "upcoming_media"
 CONF_SERVER_ID = "server_id"
 CONF_SERVER_PING = "server_ping"
 CONF_SERVER_NAME = "server_name"
+CONF_SERVER_API_KEY = "api_key"
 
 
 CONF_SENSORS = "sensors"
@@ -904,7 +905,8 @@ LATEST_QUERY_FIELDS = {
     Item.TAGLINES,
 }
 
-LATEST_QUERY_SORT_BY = [SortBy.DATE_CREATED, SortBy.SORT_NAME, SortBy.PRODUCTION_YEAR]
+LATEST_QUERY_SORT_BY = [SortBy.DATE_CREATED,
+                        SortBy.SORT_NAME, SortBy.PRODUCTION_YEAR]
 LATEST_QUERY_SORT_ORDER = [
     SortOrder.DESCENDING,
     SortOrder.ASCENDING,

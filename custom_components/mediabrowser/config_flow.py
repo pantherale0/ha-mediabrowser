@@ -43,6 +43,7 @@ from .const import (
     CONF_SENSOR_USER,
     CONF_SENSORS,
     CONF_SERVER,
+    CONF_SERVER_API_KEY,
     CONF_TIMEOUT,
     CONF_UPCOMING_MEDIA,
     DATA_HUB,
@@ -86,49 +87,6 @@ class MediaBrowserConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial discovery step."""
-
-        self.available_servers = {server[Server.ID]: server for server in discover_mb()}
-        for entry in self._async_current_entries(include_ignore=True):
-            if entry.unique_id is not None:
-                self.available_servers.pop(entry.unique_id, None)
-
-        if self.available_servers is not None:
-            if len(self.available_servers) == 0:
-                return await self.async_step_manual()
-            if len(self.available_servers) == 1:
-                self.discovered_server_id = next(iter(self.available_servers))
-                return await self.async_step_manual()
-
-        return await self.async_step_select()
-
-    async def async_step_select(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle multiple servers discovered step."""
-        if user_input is not None:
-            self.discovered_server_id = user_input[CONF_SERVER]
-            return await self.async_step_manual()
-
-        server_list = (
-            {
-                server[
-                    Discovery.ID
-                ]: f'{server[Discovery.NAME] or "Unknown"} ({server[Discovery.ADDRESS]})'
-                for server in self.available_servers.values()
-            }
-            if self.available_servers is not None
-            else {}
-        )
-
-        return self.async_show_form(
-            step_id="select",
-            data_schema=vol.Schema({vol.Required(CONF_SERVER): vol.In(server_list)}),
-        )
-
-    async def async_step_manual(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle the initial step."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -136,7 +94,8 @@ class MediaBrowserConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
                 await self.async_set_unique_id(user_input[CONF_CACHE_SERVER_ID])
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
-                    title=user_input.get(CONF_NAME, user_input[CONF_CACHE_SERVER_NAME]),
+                    title=user_input.get(
+                        CONF_NAME, user_input[CONF_CACHE_SERVER_NAME]),
                     data={},
                     options=user_input
                     | {
@@ -148,14 +107,8 @@ class MediaBrowserConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
 
         previous_input = user_input or {}
 
-        default_url = None
+        default_url = ""
         default_name = DEFAULT_SERVER_NAME
-        default_username = None
-        default_password = None
-        if self.discovered_server_id is not None and self.available_servers is not None:
-            server = self.available_servers[self.discovered_server_id]
-            default_url = server[Discovery.ADDRESS]
-            default_name = server[Discovery.NAME] or ""
 
         data_schema = vol.Schema(
             {
@@ -163,13 +116,9 @@ class MediaBrowserConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
                     CONF_URL,
                     default=previous_input.get(CONF_URL, default_url),
                 ): str,
-                vol.Required(
-                    CONF_USERNAME,
-                    default=previous_input.get(CONF_USERNAME, default_username),
-                ): str,
-                vol.Required(
-                    CONF_PASSWORD,
-                    default=previous_input.get(CONF_PASSWORD, default_password),
+                vol.Optional(
+                    CONF_SERVER_API_KEY,
+                    default=previous_input.get(CONF_SERVER_API_KEY, ""),
                 ): str,
                 vol.Optional(
                     CONF_NAME,
@@ -179,7 +128,7 @@ class MediaBrowserConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
         )
 
         return self.async_show_form(
-            step_id="manual", data_schema=data_schema, errors=errors
+            step_id="user", data_schema=data_schema, errors=errors
         )
 
     async def async_step_reauth(
@@ -187,7 +136,8 @@ class MediaBrowserConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
     ) -> FlowResult:
         """Handle the reauthorization step."""
         errors: dict[str, str] = {}
-        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"])
 
         assert entry is not None
 
@@ -200,7 +150,8 @@ class MediaBrowserConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
                 password=user_input[CONF_PASSWORD],
             ):
                 return self.async_create_entry(
-                    title=options.get(CONF_NAME, options.get(CONF_CACHE_SERVER_NAME)),
+                    title=options.get(CONF_NAME, options.get(
+                        CONF_CACHE_SERVER_NAME)),
                     data={},
                     options=options,
                 )
@@ -217,11 +168,13 @@ class MediaBrowserConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
             {
                 vol.Required(
                     CONF_USERNAME,
-                    default=previous_input.get(CONF_USERNAME, default_username),
+                    default=previous_input.get(
+                        CONF_USERNAME, default_username),
                 ): str,
                 vol.Required(
                     CONF_PASSWORD,
-                    default=previous_input.get(CONF_PASSWORD, default_password),
+                    default=previous_input.get(
+                        CONF_PASSWORD, default_password),
                 ): str,
             }
         )
@@ -326,7 +279,8 @@ class MediaBrowserOptionsFlow(OptionsFlow):
                 {
                     vol.Required(
                         CONF_UPCOMING_MEDIA,
-                        default=self.options.get(CONF_UPCOMING_MEDIA),  # type: ignore
+                        default=self.options.get(
+                            CONF_UPCOMING_MEDIA),  # type: ignore
                     ): bool,
                 }
             ),
@@ -349,19 +303,23 @@ class MediaBrowserOptionsFlow(OptionsFlow):
                 {
                     vol.Optional(
                         CONF_EVENTS_SESSIONS,
-                        default=self.options.get(CONF_EVENTS_SESSIONS),  # type: ignore
+                        default=self.options.get(
+                            CONF_EVENTS_SESSIONS),  # type: ignore
                     ): bool,
                     vol.Optional(
                         CONF_EVENTS_ACTIVITY_LOG,
-                        default=self.options.get(CONF_EVENTS_ACTIVITY_LOG),  # type: ignore
+                        default=self.options.get(
+                            CONF_EVENTS_ACTIVITY_LOG),  # type: ignore
                     ): bool,
                     vol.Optional(
                         CONF_EVENTS_TASKS,
-                        default=self.options.get(CONF_EVENTS_TASKS),  # type: ignore
+                        default=self.options.get(
+                            CONF_EVENTS_TASKS),  # type: ignore
                     ): bool,
                     vol.Optional(
                         CONF_EVENTS_OTHER,
-                        default=self.options.get(CONF_EVENTS_OTHER),  # type: ignore
+                        default=self.options.get(
+                            CONF_EVENTS_OTHER),  # type: ignore
                     ): bool,
                 }
             ),
@@ -457,7 +415,8 @@ class MediaBrowserOptionsFlow(OptionsFlow):
         entry_list = {
             key: value.name or value.original_name
             for key, value in sorted(
-                entries.items(), key=lambda x: x[1].name or x[1].original_name  # type: ignore
+                # type: ignore
+                entries.items(), key=lambda x: x[1].name or x[1].original_name
             )
         }
 
@@ -568,13 +527,15 @@ class MediaBrowserOptionsFlow(OptionsFlow):
                     vol.Required(
                         CONF_CLIENT_NAME,
                         default=self.config_entry.options.get(
-                            CONF_CLIENT_NAME, self.options.get(CONF_CLIENT_NAME)
+                            CONF_CLIENT_NAME, self.options.get(
+                                CONF_CLIENT_NAME)
                         ),
                     ): str,
                     vol.Required(
                         CONF_DEVICE_NAME,
                         default=self.config_entry.options.get(
-                            CONF_DEVICE_NAME, self.options.get(CONF_DEVICE_NAME)
+                            CONF_DEVICE_NAME, self.options.get(
+                                CONF_DEVICE_NAME)
                         ),
                     ): str,
                     vol.Required(
@@ -586,7 +547,8 @@ class MediaBrowserOptionsFlow(OptionsFlow):
                     vol.Required(
                         CONF_DEVICE_VERSION,
                         default=self.config_entry.options.get(
-                            CONF_DEVICE_VERSION, self.options.get(CONF_DEVICE_VERSION)
+                            CONF_DEVICE_VERSION, self.options.get(
+                                CONF_DEVICE_VERSION)
                         ),
                     ): str,
                     vol.Required(
@@ -611,16 +573,20 @@ async def _validate_config(
     save_url = options.get(CONF_URL)
     save_username = options.get(CONF_USERNAME)
     save_password = options.get(CONF_PASSWORD)
+    serv_api_key = options.get(CONF_SERVER_API_KEY)
     save_api_key = options.get(CONF_CACHE_SERVER_API_KEY)
 
-    if url is not None:
+    if url != "":
         options[CONF_URL] = url
-    if username is not None:
+    if username != "":
         options[CONF_USERNAME] = username
         options.pop(CONF_CACHE_SERVER_API_KEY, None)
-    if password is not None:
+    if password != "":
         options[CONF_PASSWORD] = password
         options.pop(CONF_CACHE_SERVER_API_KEY, None)
+    if serv_api_key != "":
+        options[CONF_SERVER_API_KEY] = serv_api_key
+        options[CONF_CACHE_SERVER_API_KEY] = True
 
     hub = MediaBrowserHub(options)
     try:
