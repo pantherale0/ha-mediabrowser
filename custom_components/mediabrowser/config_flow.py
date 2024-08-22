@@ -90,6 +90,7 @@ class MediaBrowserConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            _LOGGER.debug(user_input)
             if await _validate_config(user_input, errors):
                 await self.async_set_unique_id(user_input[CONF_CACHE_SERVER_ID])
                 self._abort_if_unique_id_configured()
@@ -565,9 +566,6 @@ class MediaBrowserOptionsFlow(OptionsFlow):
 async def _validate_config(
     options: dict[str, Any],
     errors: dict[str, str],
-    url: str | None = None,
-    username: str | None = None,
-    password: str | None = None,
 ) -> bool:
     errors.clear()
     save_url = options.get(CONF_URL)
@@ -576,14 +574,6 @@ async def _validate_config(
     serv_api_key = options.get(CONF_SERVER_API_KEY)
     save_api_key = options.get(CONF_CACHE_SERVER_API_KEY)
 
-    if url != "":
-        options[CONF_URL] = url
-    if username != "":
-        options[CONF_USERNAME] = username
-        options.pop(CONF_CACHE_SERVER_API_KEY, None)
-    if password != "":
-        options[CONF_PASSWORD] = password
-        options.pop(CONF_CACHE_SERVER_API_KEY, None)
     if serv_api_key != "":
         options[CONF_SERVER_API_KEY] = serv_api_key
         options[CONF_CACHE_SERVER_API_KEY] = True
@@ -611,10 +601,8 @@ async def _validate_config(
         _LOGGER.debug("Unexpected error: %s (%s)", type(err), err)
         errors["base"] = "unknown"
     else:
-        options[CONF_URL] = url or save_url
-        options[CONF_USERNAME] = username or save_username
-        options[CONF_PASSWORD] = password or save_password
-        options[CONF_CACHE_SERVER_API_KEY] = hub.api_key or save_api_key
+        options[CONF_URL] = save_url
+        options[CONF_SERVER_API_KEY] = save_api_key
         options[CONF_CLIENT_NAME] = hub.client_name
         options[CONF_DEVICE_NAME] = hub.device_name
         options[CONF_DEVICE_ID] = hub.device_id

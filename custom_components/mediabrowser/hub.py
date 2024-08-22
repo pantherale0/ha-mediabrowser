@@ -23,7 +23,7 @@ from .helpers import (
 
 from .const import (
     APP_PLAYERS,
-    CONF_CACHE_SERVER_API_KEY,
+    CONF_SERVER_API_KEY,
     CONF_CACHE_SERVER_ID,
     CONF_CACHE_SERVER_NAME,
     CONF_CACHE_SERVER_PING,
@@ -82,9 +82,10 @@ class MediaBrowserHub:
 
     def __init__(self, options: dict[str, Any]) -> None:
         parsed_url = urllib.parse.urlparse(options[CONF_URL])
+        _LOGGER.debug(parsed_url)
         self._host: str = parsed_url.hostname
-        self.username: str = options[CONF_USERNAME]
-        self.password: str = options[CONF_PASSWORD]
+        self.username: str = options.get(CONF_USERNAME)
+        self.password: str = options.get(CONF_PASSWORD)
         self._use_ssl: bool = parsed_url.scheme == "https" or (
             parsed_url.scheme == "" and parsed_url.port == DEFAULT_SSL_PORT
         )
@@ -94,10 +95,14 @@ class MediaBrowserHub:
             else (DEFAULT_SSL_PORT if self._use_ssl else DEFAULT_PORT)
         )
 
-        self.timeout: float = options.get(CONF_TIMEOUT, DEFAULT_REQUEST_TIMEOUT)
-        self.client_name: str = options.get(CONF_CLIENT_NAME, DEFAULT_CLIENT_NAME)
-        self.device_name: str = options.get(CONF_DEVICE_NAME, DEFAULT_DEVICE_NAME)
-        self.device_id: str = options.get(CONF_DEVICE_ID, uuid.random_uuid_hex())
+        self.timeout: float = options.get(
+            CONF_TIMEOUT, DEFAULT_REQUEST_TIMEOUT)
+        self.client_name: str = options.get(
+            CONF_CLIENT_NAME, DEFAULT_CLIENT_NAME)
+        self.device_name: str = options.get(
+            CONF_DEVICE_NAME, DEFAULT_DEVICE_NAME)
+        self.device_id: str = options.get(
+            CONF_DEVICE_ID, uuid.random_uuid_hex())
         self.device_version: str = (
             options.get(CONF_DEVICE_VERSION) or DEFAULT_DEVICE_VERSION
         )
@@ -134,12 +139,13 @@ class MediaBrowserHub:
             DEFAULT_EVENTS_OTHER,
         )
 
-        self.api_key: str | None = options.get(CONF_CACHE_SERVER_API_KEY)
+        self.api_key: str | None = options.get(CONF_SERVER_API_KEY)
         self.user_id: str | None = options.get(CONF_CACHE_SERVER_USER_ID)
         self.server_id: str | None = options.get(CONF_CACHE_SERVER_ID)
         self.server_name: str | None = options.get(CONF_CACHE_SERVER_NAME)
         self.server_ping: str | None = options.get(CONF_CACHE_SERVER_PING)
-        self.server_version: str | None = options.get(CONF_CACHE_SERVER_VERSION)
+        self.server_version: str | None = options.get(
+            CONF_CACHE_SERVER_VERSION)
 
         self._last_keep_alive: datetime = datetime.utcnow()
         self._keep_alive_timeout: float | None = None
@@ -166,7 +172,8 @@ class MediaBrowserHub:
 
         self._abort: bool = True
 
-        self._availability_listeners: set[Callable[[bool], Awaitable[None]]] = set()
+        self._availability_listeners: set[Callable[[
+            bool], Awaitable[None]]] = set()
         self._availability_task: asyncio.Task[None] | None = None
         self.is_available: bool = False
 
@@ -180,7 +187,8 @@ class MediaBrowserHub:
         ] = set()
 
         self._session_changed_listeners: set[
-            Callable[[dict[str, Any] | None, dict[str, Any] | None], Awaitable[None]]
+            Callable[[dict[str, Any] | None,
+                      dict[str, Any] | None], Awaitable[None]]
         ] = set()
 
         self._library_listeners: dict[
@@ -306,7 +314,8 @@ class MediaBrowserHub:
     async def async_get_items(self, params: dict[str, Any]) -> dict[str, Any]:
         """Gets a list of items."""
         # jellyfin crashes sometimes if using /Items, providing 500 Internal server error
-        return await self.async_get_user_items(self.user_id, params)  # type: ignore
+        # type: ignore
+        return await self.async_get_user_items(self.user_id, params)
         # await self._async_needs_authentication()
         # return await self._async_rest_get_json(ApiUrl.ITEMS, params)
 
@@ -437,7 +446,8 @@ class MediaBrowserHub:
         self.api_key = ""
         self._auth_update()
         response = await self._async_rest_post_get_json(
-            ApiUrl.AUTHENTICATE, {"username": self.username, "pw": self.password}
+            ApiUrl.AUTHENTICATE, {
+                "username": self.username, "pw": self.password}
         )
         self.api_key = response["AccessToken"]
         self.user_id = response["User"]["Id"]
@@ -558,7 +568,8 @@ class MediaBrowserHub:
             if self._ws is not None and not self._ws.closed:
                 await self._ws.close()
         except Exception as err:  # pylint: disable=broad-except
-            _LOGGER.warning("Error while closing websocket connection: %s", err)
+            _LOGGER.warning(
+                "Error while closing websocket connection: %s", err)
         self._ws = None
 
     async def _async_ws_loop(self):
@@ -575,7 +586,8 @@ class MediaBrowserHub:
             except aiohttp.ClientConnectionError as err:
                 _LOGGER.warning("Connection error: %s", err)
             except aiohttp.ClientResponseError as err:
-                _LOGGER.warning("Request error: %s (%s)", err.status, err.message)
+                _LOGGER.warning("Request error: %s (%s)",
+                                err.status, err.message)
             except (asyncio.TimeoutError, TimeoutError) as err:
                 _LOGGER.warning("Timeout error: %s", err)
             except asyncio.CancelledError:
@@ -622,7 +634,7 @@ class MediaBrowserHub:
         schema_ws = "wss" if self._use_ssl else "ws"
         self._ws_url: str = f"{schema_ws}://{self._host}:{self._port}"
         _LOGGER.debug(
-            "Server is %s because ping is %s", self.server_type, self.server_ping
+            "Server %s is %s because ping is %s", self._ws_url, self.server_type, self.server_ping
         )
         if self.server_ping is not None and self.server_type == ServerType.JELLYFIN:
             self._ws_url += "/socket"
@@ -644,7 +656,8 @@ class MediaBrowserHub:
             self._default_params["X-Emby-Client-Version"] = self.device_version
             if self.api_key != "":
                 self._default_params["X-Emby-Token"] = self.api_key
-                self._ws_url += f"?api_key={self.api_key}&deviceId={self.device_id}"
+                self._ws_url += f"?api_key={
+                    self.api_key}&deviceId={self.device_id}"
             else:
                 self._default_params.pop("X-Emby-Token", None)
 
@@ -894,7 +907,8 @@ class MediaBrowserHub:
 
         for key in keys:
             library_id, user_id, item_type = key
-            params = LATEST_QUERY_PARAMS | {Query.INCLUDE_ITEM_TYPES: item_type}
+            params = LATEST_QUERY_PARAMS | {
+                Query.INCLUDE_ITEM_TYPES: item_type}
             if library_id != KEY_ALL:
                 params |= {Item.PARENT_ID: library_id}
             new_data[key] = (
@@ -931,7 +945,8 @@ class MediaBrowserHub:
             match msg_type:
                 case WebsocketMessage.SESSIONS:
                     sessions = deepcopy(data)
-                    asyncio.ensure_future(self._handle_sessions_message(sessions))
+                    asyncio.ensure_future(
+                        self._handle_sessions_message(sessions))
                     call_listeners = False
                 case WebsocketMessage.KEEP_ALIVE:
                     _LOGGER.debug(
@@ -942,7 +957,8 @@ class MediaBrowserHub:
                     _LOGGER.debug(
                         "ForceKeepAlive response received from %s", self.server_url
                     )
-                    self._keep_alive_timeout = msg.get("Data", KEEP_ALIVE_TIMEOUT) / 2
+                    self._keep_alive_timeout = msg.get(
+                        "Data", KEEP_ALIVE_TIMEOUT) / 2
                     call_listeners = False
                 case WebsocketMessage.LIBRARY_CHANGED:
                     if any(self._library_listeners):
@@ -952,7 +968,8 @@ class MediaBrowserHub:
                     data = get_library_changed_event_data(data)
                 case WebsocketMessage.ACTIVITY_LOG_ENTRY:
                     if self.send_activity_events and any(self._websocket_listeners):
-                        asyncio.ensure_future(self._handle_activity_log_message())
+                        asyncio.ensure_future(
+                            self._handle_activity_log_message())
                     call_listeners = False
                 case WebsocketMessage.SCHEDULED_TASK_INFO:
                     call_listeners = self.send_task_events
@@ -1021,7 +1038,8 @@ class MediaBrowserHub:
     def _send_keep_alive(self) -> None:
         if not self._abort and self._ws is not None:
             _LOGGER.debug("Sending keep alive message")
-            asyncio.ensure_future(self._ws.send_str('{"MessageType":"KeepAlive"}'))
+            asyncio.ensure_future(self._ws.send_str(
+                '{"MessageType":"KeepAlive"}'))
             self._last_keep_alive = datetime.utcnow()
             self._keep_alive_timeout = None
 
