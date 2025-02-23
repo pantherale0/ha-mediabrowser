@@ -311,14 +311,6 @@ class MediaBrowserHub:
         await self._async_needs_authentication()
         return await self._async_rest_get_json(ApiUrl.GENRES, params)
 
-    async def async_get_items(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Gets a list of items."""
-        # jellyfin crashes sometimes if using /Items, providing 500 Internal server error
-        # type: ignore
-        return await self.async_get_user_items(self.user_id, params)
-        # await self._async_needs_authentication()
-        # return await self._async_rest_get_json(ApiUrl.ITEMS, params)
-
     async def async_get_libraries(self) -> list[dict[str, Any]]:
         """Gets the current server libraries."""
         await self._async_needs_authentication()
@@ -375,13 +367,13 @@ class MediaBrowserHub:
         await self._async_needs_authentication()
         return await self._async_rest_get_json(ApiUrl.STUDIOS, params)
 
-    async def async_get_user_items(
-        self, user_id: str, params: dict[str, Any]
+    async def async_get_items(
+        self, params: dict[str, Any]
     ) -> dict[str, Any]:
         """Gets a list of items."""
         await self._async_needs_authentication()
         return await self._async_rest_get_json(
-            f"{ApiUrl.USERS}/{user_id}{ApiUrl.ITEMS}", params
+            f"{ApiUrl.ITEMS}", params
         )
 
     async def async_get_users(self) -> list[dict[str, Any]]:
@@ -912,9 +904,7 @@ class MediaBrowserHub:
             if library_id != KEY_ALL:
                 params |= {Item.PARENT_ID: library_id}
             new_data[key] = (
-                await self.async_get_user_items(user_id, params)
-                if user_id != KEY_ALL
-                else await self.async_get_items(params)
+                await self.async_get_items(params)
             )
 
         self._library_infos = new_data

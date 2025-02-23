@@ -117,7 +117,7 @@ class MediaBrowserConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
                     CONF_URL,
                     default=previous_input.get(CONF_URL, default_url),
                 ): str,
-                vol.Optional(
+                vol.Required(
                     CONF_SERVER_API_KEY,
                     default=previous_input.get(CONF_SERVER_API_KEY, ""),
                 ): str,
@@ -569,15 +569,7 @@ async def _validate_config(
 ) -> bool:
     errors.clear()
     save_url = options.get(CONF_URL)
-    save_username = options.get(CONF_USERNAME)
-    save_password = options.get(CONF_PASSWORD)
     serv_api_key = options.get(CONF_SERVER_API_KEY)
-    save_api_key = options.get(CONF_CACHE_SERVER_API_KEY)
-
-    if serv_api_key != "":
-        options[CONF_SERVER_API_KEY] = serv_api_key
-        options[CONF_CACHE_SERVER_API_KEY] = True
-
     hub = MediaBrowserHub(options)
     try:
         await hub.async_start(False)
@@ -602,7 +594,7 @@ async def _validate_config(
         errors["base"] = "unknown"
     else:
         options[CONF_URL] = save_url
-        options[CONF_SERVER_API_KEY] = save_api_key
+        options[CONF_SERVER_API_KEY] = serv_api_key
         options[CONF_CLIENT_NAME] = hub.client_name
         options[CONF_DEVICE_NAME] = hub.device_name
         options[CONF_DEVICE_ID] = hub.device_id
